@@ -1007,6 +1007,10 @@ int main(int argc, char *argv[])
             return -1;
         }
 
+#ifdef WITH_TINYDTLS
+        tv.tv_sec = 0;
+        tv.tv_usec = 100000;
+#endif
         result = select(FD_SETSIZE, &readfds, 0, 0, &tv);
 
         if ( result < 0 )
@@ -1081,6 +1085,7 @@ int main(int argc, char *argv[])
                         {
                              fprintf(stderr, "error handling message %d\n",result);
                         }
+                        dtls_check_retransmit(connP->dtlsContext, NULL);
 #else
                         lwm2m_handle_packet(lwm2mH, buffer, numBytes, connP);
 #endif
