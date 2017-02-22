@@ -27,6 +27,10 @@ find_package(Git REQUIRED)
 add_custom_command(OUTPUT ${TINYDTLS_SOURCES} COMMAND ${GIT_EXECUTABLE} submodule update)
 add_custom_target(submodule_update SOURCES ${TINYDTLS_SOURCES})
 
+execute_process(COMMAND uname -m OUTPUT_VARIABLE arch OUTPUT_STRIP_TRAILING_WHITESPACE)
+set(HOST_ARCHITECTURE "${CMAKE_SYSTEM_NAME}-${arch}")
+string(TOLOWER ${HOST_ARCHITECTURE} HOST_ARCHITECTURE)
+
 # The tinydtls configure step will create some more source files (tinydtls.h etc).
 # Use cmake "External Project" modul to call autoreconf and configure on tinydtls if necessary.
 if (NOT EXISTS ${TINYDTLS_SOURCES_GENERATED})
@@ -37,7 +41,7 @@ if (NOT EXISTS ${TINYDTLS_SOURCES_GENERATED})
         UPDATE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND ""
-        CONFIGURE_COMMAND "${TINYDTLS_SOURCES_DIR}/configure"
+        CONFIGURE_COMMAND ${TINYDTLS_SOURCES_DIR}/configure --host=${HOST_ARCHITECTURE} ac_cv_func_malloc_0_nonnull=yes
         BUILD_IN_SOURCE 1
         LOG_DOWNLOAD 1
         LOG_CONFIGURE 1
