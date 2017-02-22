@@ -672,7 +672,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
     ++current_option;
 
     /* avoids code duplication without function overhead */
-    unsigned int *x = &option_delta;
+    volatile unsigned int *x = &option_delta;
     do
     {
       if (*x==13)

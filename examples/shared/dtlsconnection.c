@@ -285,8 +285,11 @@ dtls_context_t * get_dtls_context(dtls_connection_t * connList) {
         dtlsContext = dtls_new_context(connList);
         dtls_set_log_level(0);
         if (dtlsContext == NULL)
+        {
             fprintf(stderr, "Failed to create the DTLS context\r\n");
-        dtls_set_handler(dtlsContext, &cb);
+        }
+        else
+            dtls_set_handler(dtlsContext, &cb);
     }else{
         dtlsContext->app = connList;
     }
@@ -406,9 +409,10 @@ dtls_connection_t * connection_new_incoming(dtls_connection_t * connList,
     dtls_connection_t * connP;
 
     connP = (dtls_connection_t *)malloc(sizeof(dtls_connection_t));
-    memset(connP, 0, sizeof(dtls_connection_t));
+
     if (connP != NULL)
     {
+        memset(connP, 0, sizeof(dtls_connection_t));
         connP->sock = sock;
         memcpy(&(connP->addr), addr, addrLen);
         connP->addrLen = addrLen;

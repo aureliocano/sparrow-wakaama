@@ -596,7 +596,7 @@ static void prv_create_client(char * buffer,
     {
         lwm2m_data_t * dataP;
 
-        if (1 != sscanf(buffer, "%d", &value))
+        if (1 != sscanf(buffer, "%lld", &value))
         {
             fprintf(stdout, "Invalid value !");
             return;
@@ -978,6 +978,7 @@ int main(int argc, char *argv[])
     if (NULL == lwm2mH)
     {
         fprintf(stderr, "lwm2m_init() failed\r\n");
+        close(sock);
         return -1;
     }
 

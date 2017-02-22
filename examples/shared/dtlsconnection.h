@@ -60,6 +60,7 @@ typedef struct _dtls_connection_t
 
 int create_socket(const char * portStr, int ai_family);
 
+dtls_context_t * get_dtls_context(dtls_connection_t * connList);
 dtls_connection_t * connection_find(dtls_connection_t * connList, const struct sockaddr_storage * addr, size_t addrLen);
 dtls_connection_t * connection_new_incoming(dtls_connection_t * connList, int sock, const struct sockaddr * addr, size_t addrLen);
 dtls_connection_t * connection_create(dtls_connection_t * connList, int sock, lwm2m_object_t * securityObj, int instanceId, lwm2m_context_t * lwm2mH, int addressFamily);
