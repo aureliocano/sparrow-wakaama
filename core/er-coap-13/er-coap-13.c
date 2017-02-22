@@ -653,8 +653,8 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
   current_option += coap_pkt->token_len;
 
   unsigned int option_number = 0;
-  unsigned int option_delta = 0;
-  size_t option_length = 0;
+  volatile unsigned int option_delta = 0;
+  volatile size_t option_length = 0;
 
   while (current_option < data+data_len)
   {

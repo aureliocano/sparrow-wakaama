@@ -630,13 +630,13 @@ uint8_t lwm2m_buffer_send(void * sessionH,
 
     if (connP == NULL)
     {
-        fprintf(stderr, "#> failed sending %lu bytes, missing connection\r\n", length);
+        fprintf(stderr, "#> failed sending %d bytes, missing connection\r\n", length);
         return COAP_500_INTERNAL_SERVER_ERROR ;
     }
 
     if (-1 == connection_send(connP, buffer, length))
     {
-        fprintf(stderr, "#> failed sending %lu bytes\r\n", length);
+        fprintf(stderr, "#> failed sending %d bytes\r\n", length);
         return COAP_500_INTERNAL_SERVER_ERROR ;
     }
 
