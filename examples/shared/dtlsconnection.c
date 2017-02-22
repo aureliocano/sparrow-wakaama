@@ -26,7 +26,7 @@
 #define COAPS_PORT "5684"
 #define URI_LENGTH 256
 
-dtls_context_t * dtlsContext;
+dtls_context_t * dtlsContext = NULL;
 
 /********************* Security Obj Helpers **********************/
 char * security_get_uri(lwm2m_object_t * obj, int instanceId, char * uriBuffer, int bufferSize){
@@ -160,7 +160,7 @@ int send_data(dtls_connection_t *connP,
         offset += nbSent;
     }
     connP->lastSend = lwm2m_gettime();
-    return 0;
+    return offset;
 }
 
 /**************************  TinyDTLS Callbacks  ************************/
@@ -168,6 +168,10 @@ int send_data(dtls_connection_t *connP,
 /* This function is the "key store" for tinyDTLS. It is called to
  * retrieve a key for the given identity within this particular
  * session. */
+#ifdef LWM2M_SERVER_MODE
+int get_psk_info(struct dtls_context_t *ctx, const session_t *session, dtls_credentials_type_t type,
+        const unsigned char *id, size_t id_len, unsigned char *result, size_t result_length);
+#else
 static int get_psk_info(struct dtls_context_t *ctx,
         const session_t *session,
         dtls_credentials_type_t type,
@@ -220,6 +224,7 @@ static int get_psk_info(struct dtls_context_t *ctx,
 
     return dtls_alert_fatal_create(DTLS_ALERT_INTERNAL_ERROR);
 }
+#endif
 
 static int send_to_peer(struct dtls_context_t *ctx,
         session_t *session, uint8 *data, size_t len) {
@@ -233,11 +238,15 @@ static int send_to_peer(struct dtls_context_t *ctx,
 
         // TODO: nat expiration?
         int err = send_data(cnx,data,len);
-        if (COAP_NO_ERROR != err)
+        if (err < 0)
         {
             return -1;
         }
-        return 0;
+#ifdef LWM2M_SERVER_MODE
+        return err;
+#else
+	return 0;
+#endif
     }
     return -1;
 }
@@ -274,6 +283,7 @@ dtls_context_t * get_dtls_context(dtls_connection_t * connList) {
     if (dtlsContext == NULL) {
         dtls_init();
         dtlsContext = dtls_new_context(connList);
+        dtls_set_log_level(0);
         if (dtlsContext == NULL)
             fprintf(stderr, "Failed to create the DTLS context\r\n");
         dtls_set_handler(dtlsContext, &cb);
@@ -396,6 +406,7 @@ dtls_connection_t * connection_new_incoming(dtls_connection_t * connList,
     dtls_connection_t * connP;
 
     connP = (dtls_connection_t *)malloc(sizeof(dtls_connection_t));
+    memset(connP, 0, sizeof(dtls_connection_t));
     if (connP != NULL)
     {
         connP->sock = sock;
@@ -514,6 +525,8 @@ dtls_connection_t * connection_create(dtls_connection_t * connList,
             else
             {
                 // no dtls session
+		if(connP->dtlsSession)
+		    free(connP->dtlsSession);
                 connP->dtlsSession = NULL;
             }
         }
@@ -531,6 +544,8 @@ void connection_free(dtls_connection_t * connList)
         dtls_connection_t * nextP;
 
         nextP = connList->next;
+	if(connList->dtlsSession)
+	    free(connList->dtlsSession);
         free(connList);
 
         connList = nextP;
@@ -542,7 +557,7 @@ void connection_free(dtls_connection_t * connList)
 int connection_send(dtls_connection_t *connP, uint8_t * buffer, size_t length){
     if (connP->dtlsSession == NULL) {
         // no security
-        if ( 0 != send_data(connP, buffer, length)) {
+        if (send_data(connP, buffer, length) < 0) {
             return -1 ;
         }
     } else {

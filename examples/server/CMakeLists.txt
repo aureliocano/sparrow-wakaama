@@ -2,14 +2,13 @@ cmake_minimum_required (VERSION 2.8)
 
 project (lwm2mserver)
 
-if(DTLS)
-    message(FATAL_ERROR "DTLS option is not supported." )
-endif()
+option(DTLS "Enable DTLS" OFF)
+
+add_definitions(-DLWM2M_SERVER_MODE)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../../core/wakaama.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/../shared/shared.cmake)
 
-add_definitions(-DLWM2M_SERVER_MODE)
 add_definitions(${SHARED_DEFINITIONS} ${WAKAAMA_DEFINITIONS})
 
 include_directories (${WAKAAMA_SOURCES_DIR} ${SHARED_INCLUDE_DIRS})

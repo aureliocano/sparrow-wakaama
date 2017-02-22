@@ -71,7 +71,11 @@
 #include <inttypes.h>
 
 #include "commandline.h"
+#ifdef WITH_TINYDTLS
+#include "dtlsconnection.h"
+#else
 #include "connection.h"
+#endif
 
 #define MAX_PACKET_SIZE 1024
 
@@ -797,10 +801,60 @@ void print_usage(void)
     fprintf(stderr, "Launch a LWM2M server on localhost.\r\n\n");
     fprintf(stdout, "Options:\r\n");
     fprintf(stdout, "  -4\t\tUse IPv4 connection. Default: IPv6 connection\r\n");
+#ifdef WITH_TINYDTLS
+    fprintf(stderr, "  -l PORT\tSet the local UDP port of the Server. Default: "LWM2M_DTLS_PORT_STR"\r\n");
+#else
     fprintf(stdout, "  -l PORT\tSet the local UDP port of the Server. Default: "LWM2M_STANDARD_PORT_STR"\r\n");
+#endif
+
     fprintf(stdout, "\r\n");
 }
 
+#ifdef WITH_TINYDTLS
+#define PSK_IDENTITY    "OurIdentity"
+#define PSK_KEY         "OurSecret"
+
+int
+get_psk_info(struct dtls_context_t *ctx,
+        const session_t *session,
+        dtls_credentials_type_t type,
+        const unsigned char *id, size_t id_len,
+        unsigned char *result, size_t result_length) {
+    switch (type)
+    {
+    case DTLS_PSK_HINT:
+        return 0;
+
+    case DTLS_PSK_IDENTITY:
+        if (result_length < strlen(PSK_IDENTITY))
+        {
+            return dtls_alert_fatal_create(DTLS_ALERT_INTERNAL_ERROR);
+        }
+        memcpy(result, PSK_IDENTITY, strlen(PSK_IDENTITY));
+
+        return strlen(PSK_IDENTITY);
+
+    case DTLS_PSK_KEY:
+        if (id_len != strlen(PSK_IDENTITY)
+         || strcmp(id, PSK_IDENTITY) != 0)
+        {
+            return dtls_alert_fatal_create(DTLS_ALERT_ILLEGAL_PARAMETER);
+        }
+        if (result_length < strlen(PSK_KEY))
+        {
+            return dtls_alert_fatal_create(DTLS_ALERT_INTERNAL_ERROR);
+        }
+        memcpy(result, PSK_KEY, strlen(PSK_KEY));
+
+        return strlen(PSK_KEY);
+
+    default:
+        break;
+    }
+
+    return dtls_alert_fatal_create(DTLS_ALERT_INTERNAL_ERROR);
+}
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -810,11 +864,18 @@ int main(int argc, char *argv[])
     int result;
     lwm2m_context_t * lwm2mH = NULL;
     int i;
-    connection_t * connList = NULL;
+#ifdef WITH_TINYDTLS
+    dtls_connection_t * connList = NULL;
+#else
+     connection_t * connList = NULL;
+#endif
     int addressFamily = AF_INET6;
     int opt;
+#ifdef WITH_TINYDTLS
+    const char * localPort = LWM2M_DTLS_PORT_STR;
+#else
     const char * localPort = LWM2M_STANDARD_PORT_STR;
-
+#endif
     command_desc_t commands[] =
     {
             {"list", "List registered clients.", NULL, prv_output_clients, NULL},
@@ -976,9 +1037,13 @@ int main(int argc, char *argv[])
                 {
                     char s[INET6_ADDRSTRLEN];
                     in_port_t port;
+#ifdef WITH_TINYDTLS
+		    dtls_connection_t * connP;
+#else
                     connection_t * connP;
+#endif
 
-					s[0] = 0;
+                    s[0] = 0;
                     if (AF_INET == addr.ss_family)
                     {
                         struct sockaddr_in *saddr = (struct sockaddr_in *)&addr;
@@ -1001,12 +1066,24 @@ int main(int argc, char *argv[])
                         connP = connection_new_incoming(connList, sock, (struct sockaddr *)&addr, addrLen);
                         if (connP != NULL)
                         {
+#ifdef WITH_TINYDTLS
+			    connP->lwm2mH = lwm2mH;
+			    connP->dtlsContext = get_dtls_context(connP);
+#endif
                             connList = connP;
                         }
                     }
                     if (connP != NULL)
                     {
+#ifdef WITH_TINYDTLS
+                        int result = connection_handle_packet(connP, buffer, numBytes);
+			if (0 != result)
+                        {
+                             fprintf(stderr, "error handling message %d\n",result);
+                        }
+#else
                         lwm2m_handle_packet(lwm2mH, buffer, numBytes, connP);
+#endif
                     }
                 }
             }
