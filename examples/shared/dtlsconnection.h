@@ -41,8 +41,12 @@
 #define LWM2M_BSSERVER_PORT_STR "5685"
 #define LWM2M_BSSERVER_PORT      5685
 
+#ifdef LWM2M_SERVER_MODE
+#define DTLS_NAT_TIMEOUT 0
+#else
 // after 40sec of inactivity we rehandshake
 #define DTLS_NAT_TIMEOUT 40
+#endif
 
 typedef struct _dtls_connection_t
 {
